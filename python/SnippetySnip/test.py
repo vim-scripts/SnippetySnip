@@ -30,11 +30,12 @@ class Test_find_end_line(unittest.TestCase):
         self.assertEqual(-1, find_end_line([], 'foo', 'bar'))
 
 
-def fake_get_snippet(file_name, snippet_name):
+def mock_get_snippet(file_name, snippet_name):
+    mock_get_snippet.last_file_name = file_name
     return "line1\nline2\n"
 
 class Test_insert_snippets(unittest.TestCase):
-    def test_inserts_snippet(self):
+    def test_inserts_simple_snippet(self):
         buffer = [
             "foo",
             "<!-- snippetysnip:snippy.cpp:snippet -->",
@@ -48,9 +49,10 @@ class Test_insert_snippets(unittest.TestCase):
             "<!-- snippetysnip_end:snippy.cpp:snippet -->",
             "bar"
         ]
-        self.assertEqual(expected, insert_snippets(buffer, fake_get_snippet))
+        self.assertEqual(expected, insert_snippets(buffer, mock_get_snippet))
+        self.assertEqual("snippy.cpp", mock_get_snippet.last_file_name)
 
-    def test_replaces_snippet(self):
+    def test_replaces_simple_snippet(self):
         buffer = [
             "foo",
             "<!-- snippetysnip:snippy.cpp:snippet -->",
@@ -66,4 +68,73 @@ class Test_insert_snippets(unittest.TestCase):
             "<!-- snippetysnip_end:snippy.cpp:snippet -->",
             "bar"
         ]
-        self.assertEqual(expected, insert_snippets(buffer, fake_get_snippet))
+        self.assertEqual(expected, insert_snippets(buffer, mock_get_snippet))
+        self.assertEqual("snippy.cpp", mock_get_snippet.last_file_name)
+
+    def test_inserts_before(self):
+        buffer = [
+            "foo",
+            "<!-- snippetysnip:snippy.cpp:snippet:(before=\"[sourcecode language='cpp']\") -->",
+            "bar"
+        ]
+        expected = [
+            "foo",
+            "<!-- snippetysnip:snippy.cpp:snippet:(before=\"[sourcecode language='cpp']\") -->",
+            "[sourcecode language='cpp']",
+            "line1",
+            "line2",
+            "<!-- snippetysnip_end:snippy.cpp:snippet -->",
+            "bar"
+        ]
+        actual = insert_snippets(buffer, mock_get_snippet)
+        self.assertEqual(expected, actual)
+        self.assertEqual("snippy.cpp", mock_get_snippet.last_file_name)
+
+    def test_inserts_before_and_after(self):
+        return
+        buffer = [
+            "foo",
+            "<!-- snippetysnip:snippy.cpp:snippet:(before=\"[sourcecode language='cpp']\", after=\"[/sourcecode]\") -->",
+            "bar"
+        ]
+        expected = [
+            "foo",
+            "<!-- snippetysnip:snippy.cpp:snippet:(before=\"[sourcecode language='cpp']\", after=\"[/sourcecode]\") -->",
+            "[sourcecode language='cpp']",
+            "line1",
+            "line2",
+            "[/sourcecode]",
+            "<!-- snippetysnip_end:snippy.cpp:snippet -->",
+            "bar"
+        ]
+        actual = insert_snippets(buffer, mock_get_snippet)
+        self.assertEqual(expected, actual)
+        self.assertEqual("snippy.cpp", mock_get_snippet.last_file_name)
+
+
+class Test_get_arguments(unittest.TestCase):
+    def test_if_no_arguments_returns_empty(self):
+        self.assertEqual({}, get_arguments("snippetysnip:file:snippet"))
+
+    def test_if_one_argument_returns_that(self):
+        self.assertEqual({'before':'foo'}, get_arguments("snippetysnip:file:snippet:(before=\"foo\")"))
+
+    def test_if_two_arguments_returns_both(self):
+        self.assertEqual({'before':'foo', 'after':'bar'}, get_arguments('snippetysnip:file:snippet:(before="foo",after="bar")'))
+
+    def test_spaces_are_allowed_but_optional(self):
+        self.assertEqual({'before':'foo', 'after':'bar'}, get_arguments('snippetysnip:file:snippet:(before =  "foo",   after="bar")'))
+
+    def test_single_quotes_also_work(self):
+        self.assertEqual({'before':'foo', 'after':'bar'}, get_arguments("snippetysnip:file:snippet:(before='foo',after='bar')"))
+
+
+class Test_remove_arguments(unittest.TestCase):
+    def test_leaves_string_without_arguments_alone(self):
+        actual =  "<!-- snippetysnip:snippy.cpp:snippet -->"
+        self.assertEqual(actual, remove_arguments(actual))
+
+    def test_removes_arguments(self):
+        actual = "<!-- snippetysnip:snippy.cpp:snippet:(before=\"[sourcecode]\") -->"
+        expected =  "<!-- snippetysnip:snippy.cpp:snippet -->"
+        self.assertEqual(expected, remove_arguments(actual))

@@ -36,3 +36,21 @@ You can have many snippets in a source file, and a target file can reference mul
 
 Paths can be relative or absolute.
 
+
+ADVANCED USAGE
+It is possible to give arguments before="..." and/or after="..." when including a snippet. These arguments will be inserted between the snippet command and the actual snippet. Here is an example, inserting code snippets into Wordpress posts:
+
+original target:
+    <!-- snippetysnip:source.cpp:foo:(before='[sourcecode language="cpp"]', after='[/sourcecode]') -->
+
+modified target:
+    <!-- snippetysnip:source.cpp:foo:(before='[sourcecode language="cpp"]', after='[/sourcecode]') -->
+    [sourcecode language="cpp"]
+    imported();
+    code();
+    here();
+    [/sourcecode]
+    <!-- snippetysnip_end:source.cpp:foo -->
+
+(This was motivated by the fact that html-comments do not work well inside [sourcecode] blocks on Wordpress)
+
