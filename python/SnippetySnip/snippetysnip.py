@@ -1,8 +1,10 @@
 import re
 
+SNIPPET_BEGIN = "snippetysnip_begin" 
+SNIPPET_END = "snippetysnip_end"
+
 def get_snippet(file_name, snippet_name):
-    snippet_begin = "snippetysnip_begin:%s" % snippet_name
-    snippet_end = "snippetysnip_end"
+    snippet_begin = "%s:%s" % (SNIPPET_BEGIN, snippet_name)
     snippet = ""
 
     in_snippet = False
@@ -16,7 +18,7 @@ def get_snippet(file_name, snippet_name):
             in_snippet = True
             found_tag = True
             continue
-        if snippet_end in line:
+        if SNIPPET_END in line:
             in_snippet = False
         if in_snippet:
             snippet += line
@@ -29,7 +31,7 @@ def get_snippet(file_name, snippet_name):
 
 
 def find_end_line(lines, file_name, snippet_name):
-    snippet_end = "snippetysnip_end:%s:%s" % (file_name, snippet_name)
+    snippet_end = "%s:%s:%s" % (SNIPPET_END, file_name, snippet_name)
     for line_no in range(0, len(lines)):
         if snippet_end in lines[line_no]:
             return line_no
@@ -80,3 +82,21 @@ def insert_snippets(old_buffer, snippet_getter=get_snippet):
                 line_no += end_line 
         line_no += 1
     return new_buffer
+
+def line_is_snippet_end(line):
+    return re.search(SNIPPET_END, line)
+
+def get_snippet_name_if_line_is_snippet_begin(line):
+    match = re.search("%s:(.*)" % SNIPPET_BEGIN, line)
+    if match:
+        return match.group(1)
+    return False
+
+def get_current_snippet_name(buf, current_line):
+    for line in range(current_line, 0, -1):
+        if line_is_snippet_end(buf[line]):
+            raise ValueError('Not in a snippet')
+        snippet_name = get_snippet_name_if_line_is_snippet_begin(buf[line])
+        if snippet_name:
+            return snippet_name
+    raise ValueError('Not in a snippet')
